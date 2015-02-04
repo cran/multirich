@@ -1,0 +1,15 @@
+e68ffab49c7f76d79c15b614a32ba3f6 *DESCRIPTION
+87079564fcb4c7a0985583283e6969b9 *NAMESPACE
+040f191236c9e9fcb99403acff558a91 *NEWS
+32cb2ca8612f4221a252ecb131f800fd *R/MVR.r
+96b993ad256a9ee201c6334b60a609f3 *inst/CITATION
+54aca5d0d4541aef18f6f1676a64fe50 *man/calc.mvd.Rd
+f80c8f4a3a4dadd9b4a7d6ac12acdd3f *man/calc.mvo.Rd
+9d82d04400aecedae4b0b3a3349351a2 *man/data.preprocess.Rd
+38e708f78c56e4fe468caf871daddfa0 *man/df.categorize.Rd
+a985acf8f3e2cdc9548eaefa4650ba74 *man/get.traitspace.Rd
+32b2df57db4fa8ca021d5cb068db521a *man/listtotext.Rd
+bd0f0fe202df05701bebb70a909e3e25 *man/matrix.check.Rd
+20ea38817a78eb671ae64fe137d2fb73 *man/multirich-package.Rd
+b7470ff2702fcd5f02cdfd476d5e82c4 *man/mvfd.Rd
+7e2edca02badca5114bd80d80d22f2a0 *man/part.mvr.beta.Rd

@@ -1,0 +1,45 @@
+#Known Bugs or issues:
+    # The code does not adequately check that the incoming data is in the correct format.
+    # Code does not switch from data frame to matrix, but instead is expected to crash with an otherwise suitable data frame (categorization step)
+    # Some R functions may produce lists that look like matrices.  These will crash this script..
+    # Categorization is acheived via rounding.  This is not an inherent property of MVR, but was a quick and easy convenience used by me..
+    # Currently all traits must be rounded to the same decimal place.  Again, not an inherent property of MVR, but a programming short-cut for convenience.
+    # Script is not yet set up to work with abundance data, consequently, the unequal.abund option does not appear anywhere else in the script.
+    # st.range option is non-functional, currently all standardization needs to be performed outside of the script.
+    # log.trans option may not work.  I found it easier to log-transform the data in Excel, and then load it into R, so I have not rigorously tested these options.
+    # No option to calculate traitspace from non-overlapping categories (e.g., as in species richness example). These trait spaces need to be calculated outside of the package and entered as inputs
+    # No option to turn off raw mvo, and this output is bulky and may clutter up the output
+    # Under some inputs, the calc.mvo function returns an error.  See additional details
+
+#CHANGES IN VERSION 2.0.2
+# Added examples back into code
+# Fixed a bug in part.mvr.beta caused by R converting a 1 row matrix to vector format
+
+#CHANGES IN VERSION 2.0.1
+#Converted documentation to use roxygen2
+#Code formatted & revised to be submitted to CRAN
+
+#CHANGES IN VERSION 2.0.0
+#Fixed/removed keywords from man pages (I misunderstood how they worked)
+#Changed umvr and smvr to utc and sutc
+
+#CHANGES IN VERSION 1.0.1
+#
+#Fixed an error in part.mvr.beta to handle the situation when there is no overlap among species
+#Improved package documentation and expanded examples.
+
+## Additional details on known bugs:
+    #Under some inputs, the calculation of overlap does not work properly
+        # ON 16 Mar 2014 Received the following error:
+          # Error in matrix(b.mat, nrow = length(br.nams2), dimnames = list(br.nams2,  : data is too long
+            # traceback()
+              #7: matrix(b.mat, nrow = length(br.nams2), dimnames = list(br.nams2, bc.nams)) at MVR.r#489
+              #6: calc.mvo(com.mat, dups) at MVR.r#271
+              #5: calc.mvd(cat.mat, in.com, traitspace, calc.ovr) at MVR.r#113
+              #4: mvfd(rt.mat, com.mat, resolution = resolution) at #6
+              #3: calc.fd(sub.mat, com.mat, index.type) at #64
+              #2: do.scnII(this.index, b.mat, i, this.combo, sp.rich.vec, num.rand) at #17
+              #1: scnII(IndexType, combo.vec, b.mat, sp.rich.vec, lcv, lit, num.rand) at #18
+          # Appears to be a bug in calc.ovr (although it is possible it is external to calc.mvo).
+          # The temporary fix was to set calc.ovr = 0 and re-run the code.
+

@@ -1,0 +1,6 @@
+bibentry(bibtype = "article",
+	title = "A new approach to measuring functional trait richness in a multivariate context",
+	author = c(person("Alexander","Keyel"),
+		person("Kerstin","Wiegand")),
+	year = "in review",
+	journal = "unpublished manuscript")
