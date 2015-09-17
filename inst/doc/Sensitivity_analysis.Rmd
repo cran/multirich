@@ -1,0 +1,51 @@
+---
+title: "Appendix C: Sensitivity analysis: Validating the use of Unique Trait Combinations for measuring multivariate functional richness"
+author: "Alexander C. Keyel <skeyel@gmail.com> and Kerstin Wiegand"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+## Overview
+This vignette examines the sensitivity of the Conceptual Example from Keyel & Wiegand to choice of categorization (see Fig. 1 of Keyel & Wiegand). At one extreme is every trait value in a single category, resulting an entirely filled trait space for every community with at least one record. At the other extreme, is every trait combination being treated as a unique combination. This provides the greatest resolution to the trait space richness, but may be limited depending on sample sizes. Specifically, if the number of records is small due to low sampling effort, much of the traitspace may be empty due to lack of data, rather than reduced functional richness. Consequently, on the following graphs, a line is drawn to indicate the trait space value where the trait space could be entirely filled if every value were unique. Note, that under random assembly, a sample size greater than this threshold is required to result in a completely full trait space. (e.g., see Keyel & Wiegand, Fig. 2 and Appendix E). This example assumes that each community has been adequately sampled, and that the differences in richness are due to biological differences between the communities, and not due to sampling artifacts.
+
+The get.breaks function is used to assist in generating breakpoints for the sensitivity analysis. The actual sensitivity analysis is called using the sensitivity.analysis() function. For users interested in examining sensitivity of data generated using random assembly, limiting similarity, and environmental filters, see the utc.sim function (not shown here, but please note that it is an alpha version, and may contain bugs. Please report bugs to skeyel@gmail.com)
+
+```{r}
+#Load package for calculation of multivariate richness & sensitivity analysis tools
+library(multirich) 
+
+#Set up labels
+sp.lbl = sprintf("sp%s",seq(1,15,1))
+com.lbl = c("pool","com1","com2","com3")
+tr.lbl = c("tr1","tr2")
+
+#Set up traits and species x trait matrix
+tr1 = c(1,1,1,1,1,2,2,2,2,3,3,3,4,4,5)
+tr2 = c(1,2,3,4,5,1,2,3,4,1,2,3,1,2,1)
+in.mat = matrix(c(tr1,tr2),ncol = 2, dimnames = list(sp.lbl,tr.lbl))
+
+#Set up communities
+pool = rep(1,15)
+com1 = c(1,0,0,0,1,0,0,0,0,0,0,1,0,0,1)
+com2 = c(1,1,0,0,0,1,1,0,0,0,0,0,0,0,0)
+com3 = c(1,0,0,0,0,0,1,0,0,0,0,0,0,0,0)
+in.com = matrix(c(pool,com1,com2,com3),nrow = 4,byrow = T,dimnames = list(com.lbl,sp.lbl))
+
+tr1.breaks = tr2.breaks = get.breaks(1,5)
+breaks = list(tr1.breaks, tr2.breaks)
+out.pdf = "none" #Specifying a file here will save the result to file.
+
+# Traitspace here is less than whole - because of a "known" trade-off between the two traits
+in.traitspaces = c(3,6,10,15) 
+
+# The results object can be used to do further manipulations of the output data
+results = sensitivity.analysis(in.mat, in.com, breaks, out.pdf, in.traitspaces = in.traitspaces)
+
+```
+
+## Discussion of scale dependence
+The results of the sensitivity analysis are unsurprising. The species pool maintains maximal richness at all levels of categorization. Community 1 shows higher richness than Community 2 with larger bin sizes, due to the greater spread in values, however, with greater resolution, the richness levels are seen to be equal. Community 2 and Community 3 show similar richness with larger bin sizes, as the values are similar, but again, with sufficient resolution, Community 3 is seen to be less rich than Community 2.

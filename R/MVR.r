@@ -1,6 +1,11 @@
 #This file is part of the multirich package. See package information for license and details
 #THIS CODE IS PROVIDED AS IS, WITHOUT ANY WARRANTY OF SUITABILITY FOR A PARTICULAR FUNCTION.
 
+#' @importFrom grDevices dev.off pdf
+#' @importFrom graphics axis boxplot par plot segments
+#' @importFrom stats median runif
+NULL
+
 #' multirich (package)
 #'
 #' Package to calculate the number of unique trait combinations and scale the
@@ -10,8 +15,8 @@
 #' @details \tabular{ll}{ %%Note tabular{ll} is tabular{lowercase(LL)} not tabular{11}
 #' Package: \tab multirich\cr
 #' Type: \tab Package\cr
-#' Version: \tab 2.0.2\cr
-#' Date: \tab 2014-02-04\cr
+#' Version: \tab 2.1.1\cr
+#' Date: \tab 2015-09-14\cr
 #' License: \tab GPL-2 (or later)\cr
 #' }
 #' @author Alexander "Sasha" Keyel\cr
@@ -125,9 +130,9 @@ matrix.check = function(in.mat){
         err.message = sprintf('%s%s',err.message, this.err)
         }
     
-    if (typeof(in.mat) != "double"){
+    if (typeof(in.mat) != "double" & typeof(in.mat) != "integer"){
         is.err = 1
-        this.err = sprintf('Input is of type %s. The input needs to be in matrix format, which is type double.\n',typeof(in.mat))
+        this.err = sprintf('Input is of type %s. The input needs to be in matrix format, which is type double or type integer.\n',typeof(in.mat))
         err.message = sprintf('%s%s', err.message, this.err)
         }
     
@@ -582,6 +587,476 @@ calc.mvo = function(in.mat,dups){
     return (mvo)
     }
 
+#' Sensitivity Analysis
+#' 
+#' Run a sensitivity analysis on the data to see to what extent richness is sensitive to choice
+#' of break points.
+#' 
+#' @param in.mat A record x trait matrix
+#' @param in.com A community x record matrix
+#' @param breaks A list containing break points to use for each trait. Categorical
+#' traits are unmodified, and should be a list containing the text "cat" and the number of categories.
+#' e.g., list("cat",2). For non-categorical traits, this list needs to contain the same number
+#' of elements for each trait. See example below for format.
+#' @param out.pdf A pdf to be created containing the results of the sensitivity analysis.
+#' "none" plots to the active R window. "no.plot" will disable the plot entirely.
+#' @param in.traitspaces a vector of trait spaces, if pre-existing trait spaces are desired. Otherwise, 
+#' the default of 'use data' will calculate traitspaces based on the range of values present in the data.
+#'
+#' @example man-roxygen/sensitivity_ex.r
+#' @export sensitivity.analysis
+sensitivity.analysis = function(in.mat, in.com, breaks, out.pdf, in.traitspaces = "use data"){
+  
+  #Set up even abundances for one community if community vector is missing.
+  if (length(in.com) == 1){ #This is to avoid getting warning messages when entering communities!
+    if (in.com == "none"){
+      in.com = matrix(rep(1,nrow(in.mat)),nrow = 1, dimnames = list(c("Community1"),rownames(in.mat)))        
+    }
+  }
+  
+  
+  if (nrow(in.mat) == 0){
+    stop("Input matrix has no rows. The sensitivity analysis requires at least one record to run")
+  }
+  
+  # check that break points contain the same number of items, and that there is an equal number of
+  # break points as there are traits in in.mat
+  check.breaks(breaks, in.mat)
+    
+  # Recategorize in.mat according to break points
+  
+  # Loop through sets of break points (check.breaks checks that all break lists have
+  # the same length (except "cat", this may need fixing
+  output.utc = output.sutc = rep(list("NA"),nrow(in.com)) # Create a list with an entry for each community
+  
+  # If calculating traitspaces, create a vector. Otherwise assign the traitspaces.
+  if (in.traitspaces[1] == "use data"){
+    traitspaces = c()  
+  }else{
+    traitspaces = in.traitspaces
+  }
+  
+  for (i in 1:length(breaks[[1]])){
+    new.mat = c()
+    new.mat.names = list(rownames(in.mat), colnames(in.mat))
+    if (in.traitspaces[1] == "use data"){ traitspace = 1 }
+    # Loop through traits in in.mat
+    for (t in 1:ncol(in.mat)){
+      trait.dim = 0 # This will get overwritten
+      
+      # Get current trait
+      this.trait = in.mat[ , t]
+      skip.recode = 0
+      
+      # Check if trait is categorical, if so, do not recode
+      #if (length(breaks[[t]][[1]]) == 1){
+        if (breaks[[t]][[1]][[1]] == "cat"){
+          recoded.trait = this.trait
+          trait.dim = breaks[[t]][[1]][[2]] 
+          skip.recode = 1
+        }
+      
+      # If trait is not categorical, recode it according to breakpoints.
+      if (skip.recode == 0){
+        # Get break points
+        # Select the breakpoints that correspond to this column [[t]] (should be a entry in breakpoints for each column in in.mat)
+        # then take the set from the current iteration [[i]]
+        break.points = breaks[[t]][[i]] 
+      
+        # Get number of categories for dimensionality purposes
+        trait.dim = length(break.points) - 1 # One fewer categories than breakpoints
+        
+        # Recode trait
+        recoded.trait = cut(this.trait, break.points) # cut does recategorization
+      }
+      
+      # Add recoded trait to new matrix
+      new.mat = c(new.mat, recoded.trait)
+    
+      # Add this trait's dimensionality to the overall traitspace
+      if (in.traitspaces[1] == "use data"){
+        traitspace = traitspace * trait.dim
+      }
+    }
+    
+    # Get traitspace, if it has not been estimated from the data
+    if (in.traitspaces[1] != "use data"){
+      traitspace = in.traitspaces[i]
+    }
+    
+    # Put recoded traits into matrix format
+    new.mat = matrix(new.mat, ncol = ncol(in.mat), dimnames = new.mat.names)
+    
+    # Calculate UTC for this recoded matrix
+    out.vals = mvfd(new.mat,in.com, traitspace = traitspace)
+    this.utc = out.vals$utc
+    
+    this.sutc = out.vals$sutc
+    
+    # Create outputs as a vector - can then plot them
+    for (k in 1:nrow(in.com)){
+      old.utc = output.utc[[k]]
+      if (old.utc[1] == "NA"){
+        old.utc = c()
+      }
+      new.utc = c(old.utc, this.utc[k])
+      output.utc[[k]] = new.utc
+      
+      old.sutc = output.sutc[[k]]
+      if (old.sutc[1] == "NA"){
+        old.sutc = c()
+      }
+      new.sutc = c(old.sutc, this.sutc[k])
+      output.sutc[[k]] = new.sutc
+    }
+    if (in.traitspaces[1] == 'use data'){
+      traitspaces = c(traitspaces, traitspace)
+    }
+  }
+  
+  # Plot output
+  n = nrow(in.mat)
+  com.names = rownames(in.com)
+  plot.sensitivity(output.sutc, traitspaces, n, com.names, out.pdf) #output.utc used to be an input.
+    
+  return(list(output.utc,output.sutc,traitspaces))
+}
+
+#' Plot sensitivity analysis results
+#' 
+#' Goal is to create a plot similar to a ROC plot, where at one side, everything is in a single
+#' category, and on the other end, everything is in its own category.
+#' 
+#' @param sutc.vals A list containing scaled unique trait combinations (see above)
+#' @param traitspaces A vector containing the traitspace for each combination value
+#' @param n The sample size of the trait x record matrix
+#' @param com.names The names of the communities being evaluated (for labeling purposes)
+#' @param in.pdf A pdf file to be generated, containing the two plots. "none" skips generating a pdf, and "no.plot" disables the function 
+#' 
+plot.sensitivity = function(sutc.vals, traitspaces, n, com.names = "none", in.pdf = "none"){
+
+  # utc.vals, 
+  # Former parameter input: #' @param utc.vals A list containing unique trait combinations (one entry for each community in in.com input for previous function). Note: no longer actually used in the function.
+  
+  if (in.pdf != "no.plot"){
+  
+    if (in.pdf != "none"){
+      pdf(in.pdf) 
+      # Reformat to print nicely in the pdf.
+      #Loop throughg communities. If only one community, this will only go once.
+      n.rows = ceiling(sqrt(length(sutc.vals)))
+      n.cols = floor(sqrt(length(sutc.vals)))
+      par(mfrow = c(n.rows,n.cols)) 
+    }
+    
+    for (i in 1:length(sutc.vals)){
+      
+      #Disabled plotting of utc - couldn't figure out how to (quickly) standardize the y axis
+      # and sutc is of more interest to me at present.
+      
+      #these.utc = utc.vals[[i]]
+      these.sutc = sutc.vals[[i]]
+      
+      #x.utc = seq(1,length(utc.vals) + 1) # plot using traitspaces instead
+      #y.label = sprintf('Unique Trait Combinations: %s', com.names[i]) #Label by community
+      #plot(c(1,traitspaces), c(1,these.utc), xlab = "Possible Traitspace", ylab = y.label)
+      #segments(n, 0, n, par("usr")[4])
+      
+      #x.sutc = seq(1, length(sutc.vals) + 1) # plot using traitspaces instead
+      y.label = sprintf('sUTC: %s', com.names[i]) #Label by community
+      plot(c(1,traitspaces), c(1,these.sutc), xlab = "Possible Traitspace", ylab = y.label, ylim = c(0,1))
+      segments(n, 0, n, par("usr")[4])  
+
+    }
+    
+    if (in.pdf != "none"){ dev.off() }
+    
+  }
+}
+
+#' Make boxplots based on multiple simulations
+#' 
+#' Takes the output results from multiple simulation iterations and plots boxplots displaying the results
+#' 
+#' @param results.mat An input matrix with ncol equal to the number of elements in traitspaces,
+#' and a given row containing the values for each trait space for that simulation run.
+#' @param traitspaces A vector identifying the traitspaces at which the simulation analysis was carried out
+#' @param n.recs The number of records in the original matrix.
+#' This is the point where if every record were unique, the entire traitspace would be full.
+#' 
+#' @export sensitivity.boxplots
+sensitivity.boxplots = function(results.mat, traitspaces, n.recs){
+  boxplot(results.mat, at = traitspaces, boxwex = 3, xaxt = 'n', ylim = c(0,1), ylab = "Scaled Unique Trait Combinations")
+  axis(side = 1, at = traitspaces, xlab = "Traitspace size")
+  segments(n.recs, 0, n.recs, par("usr")[4])  
+}
+
+
+#' Function to calculate break points for a trait
+#' 
+#' takes range of values, and then creates break points for all possible sub-categorizations of those values
+#' WARNING: Currently only gives breakpoints for integer values!
+#' 
+#' @param min.val The minimum value to be used. Can be taken from the data, or can be based on a priori knowledge
+#' @param max.val The maximum value to be used in generating break points. Can be taken from the data or can be based on a priori knowledge.
+#'
+#' @export get.breaks
+get.breaks = function(min.val, max.val){
+  
+  tr.breaks = list()
+  my.range = max.val - min.val + 1 # +1 is to include both endpoints.
+  # Starts at 2, because if everything is in the same category, you might as well drop the trait!
+  for (i in 2:my.range){
+    num.breaks = i
+    interval = my.range / num.breaks
+    breaks = seq(min.val - 0.5, max.val + 0.5, interval)  
+    
+    #Add these traits to the breaks list.
+    tr.breaks = append(tr.breaks, list(breaks))
+  }
+  
+  return(tr.breaks)
+}
+
+
+#' Expand trait breaks
+#' 
+#' Function to match longer lists of trait breaks. This may be a sub-optimal solution
+#' 
+#' @param in.lst the list of trait breakpoints to be expanded
+#' @param target.reps the target length of the trait breakpoint list.
+#'
+#' @return an expanded list of trait breakpoints
+#' @export expand.breaks
+expand.breaks = function(in.lst, target.reps){
+  
+  if (length(in.lst) > target.reps){
+    stop("Input list is too long")
+  }
+  
+  if (length(in.lst) == target.reps){
+    warning("Input list is already correct length")
+    return(in.lst)
+  }
+  
+  # Get number of times the input list needs to be replicated
+  increase.factor = target.reps %/% length(in.lst)
+  remainder = target.reps %% length(in.lst)
+
+  new.lst = list()
+  for (k in 1:length(in.lst)){
+    for (i in 1:increase.factor){
+      new.lst = append(new.lst, list(in.lst[[k]]))  
+    }
+  
+    #Add the remainder (if appropriate)
+    if (remainder >= k){
+      new.lst = append(new.lst, list(in.lst[[k]]))
+    }
+  }
+
+return(new.lst)
+}
+
+
+#' Check breaks
+#' 
+#' Check that break point lists are all the same length
+#' 
+#' @param breaks A list containing break points to use for each continuous trait.
+#' Categorical traits are unmodified, and should be a list containing the text "cat"
+#' @param in.mat A record x trait matrix
+#' 
+check.breaks = function(breaks, in.mat){
+  
+  # Check that breakpoints are provided for each trait
+  if (length(breaks) != ncol(in.mat)){
+    stop("There must be a set of break points given for each traits.\n For categorical traits, this list should contain 'cat'")
+  }
+  
+  counter = 1
+  for (lst in breaks){
+    skip = 0
+    if (lst[[1]][1] == "cat"){
+      skip = 1
+    }
+    
+    if (skip != 1){
+      # Initialize length check variable
+      if (counter == 1){ len.check = length(lst) }
+      counter = counter + 1
+    
+      if (length(lst) != len.check){
+        stop("Break point lists are not of equal length.")
+      }  
+    }
+  }
+}
+
+
+#' Sensitivity Simulator
+#'
+#' Function to help run simulations for sensitivity analysis.
+#' Note that for simplicity, the number of traits is restricted to two, each with the same range of values, as can be done for real traits by standardizing by range.
+#'
+#' @param n.reps The number of replicates for the simulation
+#' @param n.recs The number of records in the record x trait matrix
+#' @param tr1.lim The minimum and maximum allowable values for trait 1
+#' @param tr2.lim The minimum and maximum allowable values for trait 2
+#' @param sim.type "random" runs random assembly (or if any sim.type other than limiting or filter is specified), "limiting" runs limiting similarity, and "filter" applies an environmental filter.
+#' @param filter.vals Vector of filter values in text form with a semi-colon delimiter (sorry!) e.g., c("1,1", "1;2") would only allow values of 1,1 and 2,2 in the data.
+#'
+utc.sim = function(n.reps, n.recs, tr1.lim, tr2.lim, sim.type = "random", filter.vals = "none"){
+  set.seed(10) # Set random number seed for repeatability purposes
+  
+  results.vec =c()
+  for (i in 1:n.reps){
+    
+    # Check to make sure a valid sim-type was used (i.e. to prevent typos like "fitler" from running random assembly)
+    if (sim.type != "random" & sim.type != "limiting" & sim.type != "filter"){
+      stop("sim.type must equal 'random', 'limiting' or 'filter'. Please check spelling!")
+    }
+    
+    tr1 = make.trait(tr1.lim, n.recs)
+    tr2 = make.trait(tr2.lim, n.recs)
+    
+    # Set up row & col names
+    row.nams = sprintf("Record_%s", seq(1,n.recs))
+    col.nams = c("tr1","tr2")
+    
+    #Create matrix
+    in.mat = matrix(c(tr1,tr2), ncol = 2, dimnames = list(row.nams, col.nams))
+    
+    # Check that values are valid for the chosen scenario
+    if (sim.type == "limiting" | sim.type == "filter"){
+      in.mat = check.traits(in.mat, tr1.lim, tr2.lim, sim.type, filter.vals)
+    }
+    
+    # Get break points
+    tr1.breaks = get.breaks(tr1.lim[1],tr1.lim[2])
+    tr2.breaks = get.breaks(tr2.lim[1],tr2.lim[2])
+    breaks = list(tr1.breaks, tr2.breaks)
+    
+    # Actually run sensitivity analysis
+    results = sensitivity.analysis(in.mat,"none", breaks, "no.plot")
+    
+    results.vec = c(results.vec, results[[2]])
+    traitspaces = results[[3]] #This is the same for each iteration, as traitspace is defined by range
+  }
+  
+  # Reformat results.mat
+  results.mat = matrix(c(results.vec), ncol = length(traitspaces), byrow = T)
+    
+  return(list(results.mat, traitspaces))
+}
+
+
+#' Check trait
+#'
+#' Check trait for compatibility with assembly procedure & adjust as necessary
+#'
+#' @param in.mat A record x trait matrix
+#' @param tr1 Trait values for trait 1
+#' @param tr2 Trait values for trait 2
+#' @param tr1.lim The minimum and maximum allowable values for trait 1
+#' @param tr2.lim The minimum and maximum allowable values for trait 2
+#' @param sim.type "random" runs random assembly (or if any sim.type other than limiting or filter is specified), "limiting" runs limiting similarity, and "filter" applies an environmental filter.
+#' @param filter.vals Vector of filter values in text form with a semi-colon delimiter (sorry!) e.g., c("1,1", "1;2") would only allow values of 1,1 and 2,2 in the data.
+#'
+#' @note This function is very inefficient & could be optimized!
+check.traits = function(in.mat, tr1.lim, tr2.lim, sim.type, filter.vals = "none"){
+  
+  if (sim.type == "limiting" | sim.type == "filter"){
+    warning('sim.types limiting and filter have not been adequately & rigorously tested.\n Think critically about the results and watch for bugs.')
+  }
+  
+  # For testing purposes
+  #tr1 = c(1,1,2,2)
+  #tr2 = c(1,2,2,2)
+  #tr1.lim = c(1,2)
+  #tr2.lim = c(1,2)
+  #in.mat = matrix(c(tr1,tr2), ncol = 2, dimnames = list(c("one","two","three","four"),c("tr1","tr2")))
+  
+  is.ok = 0
+  counter = 0
+  while (is.ok == 0){
+    
+    # Add a break if something goes wrong in the while-loop.
+    counter = counter + 1
+    break.number = 100
+    if (counter > break.number){
+      stop(sprintf("No valid traits could be generated after %s iterations.", break.number))
+    }
+    
+    # For limiting similarity, remove duplicate values & redraw
+    if (sim.type == "limiting"){
+      
+      
+      # check for duplicated records, if none, then end loop.
+      test = duplicated(in.mat)
+      if( max(test) == 0){
+        is.ok = 1
+      }
+      
+      # replace duplicated records
+      if (is.ok != 1){
+        
+        # Do replacement (Inefficient way)
+        # Loop through all rows
+        for (i in 1:nrow(in.mat)){
+          # if a duplicate...
+          if (test[i] == 1){
+            #replace trait 1 value
+            in.mat[i, 1] = make.trait(tr1.lim, 1)
+            # replace trait 2 value
+            in.mat[i, 2] = make.trait(tr2.lim, 1)
+          }
+        }
+      }
+    }
+    
+    # For environmental filter, remove values outside of filter & redraw
+    if (sim.type == "filter"){
+      
+      # filter.vals is a list of allowable combinations in string format with a semi-colon as separator
+      
+      # set default to be ok, and if a value is replaced, change ok to not ok.
+      is.ok = 1
+      
+      # Apply environmental filter (inefficient way)
+      for (i in 1:nrow(in.mat)){
+        combo = in.mat[i , ] # Get this row of the matrix
+        combo = listtotext(combo, sep = ";")
+        
+        test.val = combo %in% filter.vals
+        
+        # If not in list of allowed environmental values, redraw the value
+        if (test.val == 0){
+          is.ok = 0
+          in.mat[i, 1] = make.trait(tr1.lim, 1)
+          in.mat[i, 2] = make.trait(tr2.lim, 1)
+        }
+      }
+    }
+  }
+  
+  return(in.mat)
+}
+
+#' Make trait
+#' 
+#' Create integer trait values from a uniform random distribution
+#'
+#' @param trlim A vector containing the minimum and maximum values for the trait
+#' @param n.recs The number of trait values to create for trait
+make.trait = function(trlim, n.recs){
+  #Adding and subtracting 0.5 is to give even probabilities when rounding.
+  trait = round(runif(n.recs,trlim[1] - 0.5, trlim[2] +0.5),0) 
+  return(trait)
+}
+
+
+
 #' List to text
 #'
 #' Take a list (or vector) and convert it to text separated by separator.
@@ -589,8 +1064,10 @@ calc.mvo = function(in.mat,dups){
 #' ORIGINALLY FROM MYR.R script
 #'
 #' @param inlist An unnested list
-#' @param separator A separator to separate elements of the list.
-listtotext = function(inlist,separator){
+#' @param sep A separator to separate elements of the list.
+#' 
+#' @export listtotext
+listtotext = function(inlist,sep){
 
     #Check that there is no nesting in the list structure
     for (thing in inlist){
@@ -602,14 +1079,14 @@ listtotext = function(inlist,separator){
         }
         
     #Check that separator is input (otherwise it can let a typo through where just a one element list or a separator is given)
-    sep.check = separator #sep.check is not used later.  It is here to make it so R will crash if it is not input.
+    sep.check = sep #sep.check is not used later.  It is here to make it so R will crash if it is not input.
 
     #Perform list to text function
     textout = sprintf("%s",inlist[1])
     listlen = length(inlist)
     if (listlen > 1){
         for (item in inlist[2:listlen]){
-            textout = sprintf("%s%s%s",textout,separator,item)
+            textout = sprintf("%s%s%s",textout,sep,item)
             }
         }
     return(textout)

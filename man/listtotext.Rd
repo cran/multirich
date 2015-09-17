@@ -3,12 +3,12 @@
 \alias{listtotext}
 \title{List to text}
 \usage{
-listtotext(inlist, separator)
+listtotext(inlist, sep)
 }
 \arguments{
 \item{inlist}{An unnested list}
 
-\item{separator}{A separator to separate elements of the list.}
+\item{sep}{A separator to separate elements of the list.}
 }
 \description{
 Take a list (or vector) and convert it to text separated by separator.

@@ -1,8 +1,8 @@
 #Known Bugs or issues:
     # The code does not adequately check that the incoming data is in the correct format.
     # Code does not switch from data frame to matrix, but instead is expected to crash with an otherwise suitable data frame (categorization step)
-    # Some R functions may produce lists that look like matrices.  These will crash this script..
-    # Categorization is acheived via rounding.  This is not an inherent property of MVR, but was a quick and easy convenience used by me..
+    # Some R functions may produce lists that look like matrices.  These will crash this script.
+    # Categorization is acheived via rounding.  This is not an inherent property of MVR, but was a quick and easy convenience used by me.
     # Currently all traits must be rounded to the same decimal place.  Again, not an inherent property of MVR, but a programming short-cut for convenience.
     # Script is not yet set up to work with abundance data, consequently, the unequal.abund option does not appear anywhere else in the script.
     # st.range option is non-functional, currently all standardization needs to be performed outside of the script.
@@ -10,6 +10,15 @@
     # No option to calculate traitspace from non-overlapping categories (e.g., as in species richness example). These trait spaces need to be calculated outside of the package and entered as inputs
     # No option to turn off raw mvo, and this output is bulky and may clutter up the output
     # Under some inputs, the calc.mvo function returns an error.  See additional details
+
+#CHANGES IN VERSION 2.1.1
+# Fixed minor issues to make package CRAN-compatible
+
+#CHANGES IN VERSION 2.1.0
+# Added code for conducting a sensitivity analysis
+
+#CHANGES IN VERSION 2.0.3
+# Made integer an accepted format, as apparently a matrix can be in integer format, and it is a bit tricky to get it out of integer format but to retain the specific matrix formatting.
 
 #CHANGES IN VERSION 2.0.2
 # Added examples back into code
