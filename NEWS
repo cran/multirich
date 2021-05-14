@@ -11,6 +11,12 @@
     # No option to turn off raw mvo, and this output is bulky and may clutter up the output
     # Under some inputs, the calc.mvo function returns an error.  See additional details
 
+#CHANGES IN VERSION 2.1.2
+# Update package to have an explicit dependency on markdown per request from CRAN
+# Add .travis.yml to allow checking on Linux using Travis
+# Fix minor issues to eliminate WARNINGS and NOTES related to qpdf and .Rbuildignore omissions.
+# NOTE: a few custom modifications were made for individual users and these updates have NOT been incorporated in the CRAN version at this time. These will need to be addressed in a future update.
+
 #CHANGES IN VERSION 2.1.1
 # Fixed minor issues to make package CRAN-compatible
 

@@ -1,4 +1,4 @@
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 #Load package for calculation of multivariate richness & sensitivity analysis tools
 library(multirich) 
 

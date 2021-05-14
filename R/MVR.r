@@ -266,7 +266,7 @@ df.categorize = function(in.mat, cell.res){
 
 #' Calculate multivariate richness and functional overlap
 #'
-#' Function to reduce to funcitonal units, and calculate multivariate richness
+#' Function to reduce to functional units, and calculate multivariate richness
 #' and functional overlap
 #'
 #' @param in.mat A record by trait matrix
